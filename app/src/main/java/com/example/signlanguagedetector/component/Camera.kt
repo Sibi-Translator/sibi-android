@@ -12,8 +12,10 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +32,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 @Composable
-fun cameraX() {
+fun cameraX(
+    prediction: MutableState<String>
+) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
 
@@ -43,13 +47,15 @@ fun cameraX() {
     var imageAnalysis: ImageAnalysis? by remember {
         mutableStateOf(null)
     }
+    val previewView = remember {
+        PreviewView(context)
+    }
 
     var imageTaken by remember { mutableStateOf("") }
     var cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
 
     AndroidView(
         factory = { context ->
-            val previewView = PreviewView(context)
             imageCapture = ImageCapture.Builder()
                 .setTargetRotation(Surface.ROTATION_0)
                 .build()
@@ -59,8 +65,7 @@ fun cameraX() {
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 val SLAnalyzer = SLAnalyzer(context, {
-                    Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                    println("ANALYZED IMAGE: $it")
+                    prediction.value = it
                 })
                 imageAnalysis!!.setAnalyzer(
                     ContextCompat.getMainExecutor(context),
@@ -81,8 +86,7 @@ fun cameraX() {
             previewView
         },
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f),
+            .fillMaxSize(),
         update = {
             cameraProviderFuture.addListener({
                 imageCapture = ImageCapture.Builder()

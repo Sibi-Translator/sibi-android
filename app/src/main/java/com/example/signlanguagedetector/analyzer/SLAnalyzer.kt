@@ -74,6 +74,7 @@ class SLAnalyzer(
         val processedOutput = model.process(tensor)
         val array = processedOutput.outputFeature0AsTensorBuffer.floatArray
         val max = array.max()
+        onResult(alphabet[array.asList().indexOf(max)].toString())
         println("CUPCAKE: " + alphabet[array.asList().indexOf(max)])
 
         //v2
