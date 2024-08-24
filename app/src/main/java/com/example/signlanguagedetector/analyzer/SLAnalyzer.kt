@@ -17,7 +17,10 @@ import com.example.signlanguagedetector.ml.MyModel2
 import com.example.signlanguagedetector.utilities.HandLandmark
 import com.example.signlanguagedetector.utilities.OverlayView
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.invoke
 import kotlinx.coroutines.runBlocking
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -56,47 +59,60 @@ class SLAnalyzer(
 
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(image: ImageProxy) {
-        val shape = handLandmark.detect(image)
-        if(shape.isEmpty()) {
-            println("CUPCAKE: IS EMPTY with shape: ${shape.size}")
-            runBlocking {
-                delay(500)
-            }
-            image.close()
-            return;
-        }
 
-        //v1 - with exact copy as 64 frames
-        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
-
-        tensor.loadBuffer(floatArrayToByteBuffer(shape))
-
-        val processedOutput = model.process(tensor)
-        val array = processedOutput.outputFeature0AsTensorBuffer.floatArray
-        val max = array.max()
-        onResult(alphabet[array.asList().indexOf(max)].toString())
-        println("CUPCAKE: " + alphabet[array.asList().indexOf(max)])
+        //v1 - with 64 frame reading
+//        var shape = handLandmark.detect2(image)
+//        if(shape.isNullOrEmpty()) {
+//            if(shape == null) {
+//                image.close()
+//                return
+//            }
+//            println("CUPCAKE: IS EMPTY with shape: ${shape.size}")
+//            runBlocking {
+//                delay(500)
+//            }
+//            image.close()
+//            return
+//        }
+//        shape = shape.normalize()
+//
+//        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
+//        tensor.loadBuffer(floatArrayToByteBuffer(shape))
+//        println(tensor.shape.joinToString(separator = ","))
+//
+//        val processedOutput = model.process(tensor)
+//        println("CUPCAKE: " + processedOutput.outputFeature0AsTensorBuffer.shape.joinToString(separator = ","))
+//        val array = processedOutput.outputFeature0AsTensorBuffer.floatArray
+//        println("CUPCAKE: " + array.joinToString(separator = ","))
+//        val max = array.max()
+//        onResult(alphabet[array.asList().indexOf(max)].toString())
+//        println("CUPCAKE: " + alphabet[array.asList().indexOf(max)])
+//        runBlocking {
+//            delay(1000)
+//            image.close()
+//        }
 
         //v2
-//        if(addNewData(shape) == 1) {
-//            val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
-//
-//            tensor.loadBuffer(dataBuffer)
-//
-//            val processedOutput = model.process(tensor)
-//            val array = processedOutput.outputFeature0AsTensorBuffer.floatArray
-//            val max = array.max()
-//            dataBuffer.clear()
-//            println("CUPCAKE: " + alphabet[array.asList().indexOf(max)])
-//        } else {
-//            println("Progress: " +index.toString() + "/" + dataBuffer.capacity())
-//        }
+        val shape = handLandmark.detect3(image)
+        if(shape.isNullOrEmpty()) {
+            println("CUPCAKE: IS EMPTY with shape: ${shape?.size}")
+            image.close()
+            return
+        }
 
-        // need to run
-//        runBlocking {
-//            delay(50)
-//        }
-        image.close()
+        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
+        tensor.loadBuffer(floatArrayToByteBuffer(shape))
+//        tensor.loadBuffer(floatArrayToByteBuffer(shape.normalize()))
+
+        val processedOutput = model.process(tensor)
+        val outputArray = processedOutput.outputFeature0AsTensorBuffer.floatArray
+
+        val max = outputArray.maxOrNull()
+        onResult(alphabet[outputArray.asList().indexOf(max)].toString())
+        Thread().run {
+            Thread.sleep(1000)
+            image.close()
+        }
     }
 
     private fun toBitmap(image: Image): Bitmap {
@@ -147,23 +163,29 @@ class SLAnalyzer(
         return byteBuffer
     }
 
-    var dataBuffer : ByteBuffer = ByteBuffer.allocate(4032 * 4)
-    var floatBuffer : FloatBuffer = dataBuffer.asFloatBuffer()
-    var index = 0;
+    fun Array<Array<Array<FloatArray>>>.normalize(): Array<Array<Array<FloatArray>>> {
+        val arr = this
+        for(i in 0 until 21) {
+            for (j in 0 until 3) {
+                val list = mutableListOf<Float>()
+                for (k in 0 until 64) {
+                    list.add(arr[0][k][i][j])
+                }
+                val max = list.max()
+                val min = list.min()
 
-    fun addNewData(data: Array<FloatArray>): Int {
-        val totalElements = data.flatMap { floatArray ->
-            floatArray.asList()
-        }.size
-
-        // Copy the new data to the FloatBuffer
-        for (floatArray in data) {
-            floatBuffer.put(floatArray, 0, floatArray.size)
+                if(min == max) {
+                    for (k in 0 until 64) {
+                        arr[0][k][i][j] = 0f
+                    }
+                } else {
+                    for (k in 0 until 64) {
+                        arr[0][k][i][j] = (arr[0][k][i][j] - min) / (max - min)
+                    }
+                }
+            }
         }
-
-        index += totalElements
-
-        // Return 1 if full, else return 0
-        return if (index == dataBuffer.capacity()) 1 else 0
+        return arr
     }
+
 }
