@@ -7,33 +7,23 @@ import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.media.Image
-import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import androidx.core.graphics.scale
+import androidx.compose.runtime.mutableStateOf
+import com.chaquo.python.Python
 import com.example.signlanguagedetector.ml.MyModel2
+import com.example.signlanguagedetector.utilities.FaceLandmark
 import com.example.signlanguagedetector.utilities.HandLandmark
 import com.example.signlanguagedetector.utilities.OverlayView
-import com.google.mlkit.vision.common.InputImage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.invoke
-import kotlinx.coroutines.runBlocking
-import org.tensorflow.lite.DataType
+import com.example.signlanguagedetector.utilities.PoseLandmark
+import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.Tensor
 import org.tensorflow.lite.support.common.FileUtil
-import org.tensorflow.lite.support.image.ImageProcessor
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import org.tensorflow.lite.task.core.vision.ImageProcessingOptions
-import org.tensorflow.lite.task.vision.classifier.ImageClassifier
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-import java.nio.FloatBuffer
 
 
 //created with tflite model
@@ -44,21 +34,97 @@ class SLAnalyzer(
 
     val model = MyModel2.newInstance(context)
 
+    var isPaused = false
+
     val interpreter = Interpreter(
         FileUtil.loadMappedFile(context, "my_model2.tflite")
     )
 
     val handLandmark = HandLandmark(context)
+    val faceLandmark = FaceLandmark(context)
+    val poseLandmark = PoseLandmark(context)
     val overlayView = OverlayView(context, null)
+
+    val python = Python.getInstance()
+    val module = python.getModule("chaquopy")
+    val dataProcessor = module["processData"]
+    val array = module["arr_frame"]
 
     val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+    val mutableList = mutableListOf<Array<Array<FloatArray>>>()
+
+    val emptyHandLandmark = mutableListOf<NormalizedLandmark>()
+    val emptyPoseLandmark = mutableListOf<NormalizedLandmark>()
+    val emptyFaceLandmark = mutableListOf<NormalizedLandmark>()
+
     init {
         interpreter.allocateTensors()
+        var arr = NormalizedLandmark.create(0f, 0f, 0f)
+        for(i in 0 until 22) {
+            emptyHandLandmark.add(arr)
+            if(i < 12)
+                emptyFaceLandmark.add(arr)
+            if(i<6)
+                emptyPoseLandmark.add(arr)
+        }
+//        println("Cupcake :" + module)
+//        val test = module["test"]
+//        println("Cupcake :" + test?.call()?.toInt())
     }
+
+    var n = 0
 
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(image: ImageProxy) {
+        if(isPaused) {
+            return image.close()
+        }
+        try {
+            if(n > 9) {
+                val x = predict()
+                n = 0
+                onResult(x.toString())
+            } else {
+                val mpImage = BitmapImageBuilder(image.toBitmap()).build()
+                val hands = handLandmark.detect(mpImage) ?: return image.close()
+                var leftArray = mutableListOf<NormalizedLandmark>()
+                var rightArray = mutableListOf<NormalizedLandmark>()
+                hands.handednesses().forEachIndexed { index, it ->
+                    try {
+                        if(it.first().displayName() == "Left") {
+                            leftArray.addAll(hands.landmarks().get(index))
+                        } else {
+                            rightArray.addAll(hands.landmarks().get(index))
+                        }
+                    } catch (e: Exception) {
+
+                    }
+                }
+                if(leftArray.isEmpty())
+                    leftArray = emptyHandLandmark
+                if(rightArray.isEmpty())
+                    rightArray = emptyHandLandmark
+                leftArray.removeAt(1)
+                rightArray.removeAt(1)
+                val la = leftArray.map { arrayOf(it.x(), it.y(), it.z()) }.toTypedArray()
+                val ra = rightArray.map { arrayOf(it.x(), it.y(), it.z()) }.toTypedArray()
+                val face = faceLandmark.detect(mpImage)
+                val faceArray = face.map {
+                    arrayOf(it.x(), it.y(), it.z())
+                }.toTypedArray()
+                val pose = poseLandmark.detect(mpImage)
+                val poseArray = pose.first().slice(11..16).map {
+                    arrayOf(it.x(), it.y(), it.z())
+                }.toTypedArray()
+
+                val result = dataProcessor?.call(poseArray, la, ra, faceArray)
+                n += 1;
+            }
+            image.close()
+        } catch (e: Exception) {
+            image.close()
+        }
 
         //v1 - with 64 frame reading
 //        var shape = handLandmark.detect2(image)
@@ -93,26 +159,33 @@ class SLAnalyzer(
 //        }
 
         //v2
-        val shape = handLandmark.detect3(image)
-        if(shape.isNullOrEmpty()) {
-            println("CUPCAKE: IS EMPTY with shape: ${shape?.size}")
-            image.close()
-            return
-        }
+//        val shape = handLandmark.detect3(image)
+//        if(shape.isNullOrEmpty()) {
+//            println("CUPCAKE: IS EMPTY with shape: ${shape?.size}")
+//            image.close()
+//            return
+//        }
+//
+//        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
+//        tensor.loadBuffer(floatArrayToByteBuffer(shape))
+////        tensor.loadBuffer(floatArrayToByteBuffer(shape.normalize()))
+//
+//        val processedOutput = model.process(tensor)
+//        val outputArray = processedOutput.outputFeature0AsTensorBuffer.floatArray
+//
+//        val max = outputArray.maxOrNull()
+//        onResult(alphabet[outputArray.asList().indexOf(max)].toString())
+//        Thread().run {
+//            Thread.sleep(1000)
+//            image.close()
+//        }
+    }
 
-        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
-        tensor.loadBuffer(floatArrayToByteBuffer(shape))
-//        tensor.loadBuffer(floatArrayToByteBuffer(shape.normalize()))
-
-        val processedOutput = model.process(tensor)
-        val outputArray = processedOutput.outputFeature0AsTensorBuffer.floatArray
-
-        val max = outputArray.maxOrNull()
-        onResult(alphabet[outputArray.asList().indexOf(max)].toString())
-        Thread().run {
-            Thread.sleep(1000)
-            image.close()
-        }
+    fun predict(): String? {
+        val predict = module["predict"]
+        val result = predict?.call()
+        println("Cupcake: " + result)
+        return result?.toString()
     }
 
     private fun toBitmap(image: Image): Bitmap {
