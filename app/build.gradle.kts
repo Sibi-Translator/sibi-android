@@ -51,15 +51,14 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "META-INF/INDEX.LIST"
         }
     }
 }
 
 chaquopy {
     defaultConfig {
-//        productFlavors {
-//            getByName("py310") { version = "3.10" }
-//        }
          version = "3.8"
 
         pip {
@@ -73,7 +72,7 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-task-vision:0.3.1")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.9.0")
     implementation(libs.vision.common)
-//    implementation(libs.tensorflow.lite.support)
+
     implementation(libs.tensorflow.lite.metadata)
     implementation(libs.androidx.navigation.compose)
 
@@ -88,8 +87,10 @@ dependencies {
     implementation("com.google.mediapipe:tasks-vision:latest.release")
 
     implementation("io.github.kevinnzou:compose-webview:0.33.6")
-//    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
-//    implementation("com.google.mlkit:face-detection:16.1.7")
+
+    implementation("com.google.cloud:google-cloud-speech:4.43.0") {
+        exclude(group = "com.google.protobuf", module = "protobuf-java")
+    }
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
