@@ -15,8 +15,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.signlanguagedetector.ui.screen.Intro
+import com.example.signlanguagedetector.ui.screen.Login
 import com.example.signlanguagedetector.ui.screen.MainMenu
 import com.example.signlanguagedetector.ui.screen.QDictionary
+import com.example.signlanguagedetector.ui.screen.Register
 import com.example.signlanguagedetector.ui.screen.Screen
 import com.example.signlanguagedetector.ui.screen.SignToText
 import com.example.signlanguagedetector.ui.screen.Translation
@@ -73,5 +75,7 @@ val screenList = listOf<Screen>(
     MainMenu,
     Translation,
     QDictionary,
-    WebViews
+    WebViews,
+    Login,
+    Register
 )

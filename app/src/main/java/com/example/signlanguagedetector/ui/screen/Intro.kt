@@ -40,7 +40,7 @@ object Intro : Screen {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Button(
-                    onClick = { navController.navigate(MainMenu.pageTitle) },
+                    onClick = { navController.navigate(Register.pageTitle) },
                     modifier = Modifier.height(60.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xff374375))
                 ) {
@@ -49,7 +49,6 @@ object Intro : Screen {
                         textAlign = TextAlign.Center,
                         color = Color.White
                     )
-
                 }
                 Text(text = "Dengan menekan tombol di atas, anda menyetujui", textAlign = TextAlign.Center, fontSize = 10.sp)
                 Text(

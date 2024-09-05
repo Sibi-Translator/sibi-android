@@ -10,13 +10,18 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +59,9 @@ object SignToText : Screen {
 
         SignLanguageDetectorTheme {
             Surface(color = Color(0xffF7EDEC), modifier = Modifier.fillMaxSize()) {
+                val text = remember {
+                    mutableStateOf("")
+                }
                 Column(
                     modifier = Modifier.fillMaxSize(),
                 ) {
@@ -73,8 +81,9 @@ object SignToText : Screen {
                     }
                     Column(modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.8f)
-                        .background(Color(0xffF7EDEC)),
+                        .wrapContentHeight()
+                        .background(Color(0xffF7EDEC))
+                        .clip(RoundedCornerShape(20.dp)),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if(started.value) {
@@ -86,6 +95,22 @@ object SignToText : Screen {
                             }
                         }
                     }
+                    TextField(
+                        value = text.value,
+                        onValueChange = {
+                            text.value = it
+                        }, enabled = false,
+                        modifier = Modifier
+                            .fillMaxWidth(1f)
+                            .padding(20.dp),
+                        placeholder = { Text(text = "Text", textAlign = TextAlign.Center) },
+                        readOnly = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            disabledContainerColor = Color.White
+                        )
+                    )
                     Row(
                         verticalAlignment = Alignment.Bottom,
                         modifier = Modifier.fillMaxWidth(),

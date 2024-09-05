@@ -1,7 +1,6 @@
 package com.example.signlanguagedetector.ui.screen
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -12,6 +11,9 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,7 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -36,10 +40,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.navigation.NavController
 import com.example.signlanguagedetector.R
-import com.example.signlanguagedetector.utilities.SpeechToTexts
 import java.util.Locale
 
 object SpeechToText : Screen {
@@ -47,47 +49,174 @@ object SpeechToText : Screen {
 
     @Composable
     override fun show(navController: NavController) {
+        val scrollState = rememberScrollState()
+        val text = remember {
+            mutableStateOf("")
+        }
+        val isListening = remember {
+            mutableStateOf(false)
+        }
+        val context = LocalContext.current
+        val activity = context.getActivity()
+        var speechRecognizer: SpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+        var speechRecognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        var isFirstListen = true
+        var tts: TextToSpeech? = null
+
+        if(tts == null) {
+            tts = TextToSpeech(context) {
+                if (it == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale("id-ID")
+                }
+            }
+        }
+
+        LaunchedEffect(key1 = true) {
+            isFirstListen = true
+            if(tts == null) {
+                tts = TextToSpeech(context) {
+                    if (it == TextToSpeech.SUCCESS) {
+                        tts?.language = Locale("id-ID")
+                    }
+                }
+            }
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
         ) {
-            val scrollState = rememberScrollState()
-            val text = remember {
-                mutableStateOf("")
-            }
-            val isListening = remember {
-                mutableStateOf(false)
-            }
-            val context = LocalContext.current
-            val activity = context.getActivity()
 
-            val stt = SpeechToTexts(context, text, { isListening.value = false })
-
-            LaunchedEffect(key1 = true) {
-                stt.resetSpeechRecognizer()
-            }
-
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
-                    .fillMaxHeight(0.6f)
+                    .fillMaxHeight(0.8f)
+                    .background(Color.White, shape = RoundedCornerShape(20.dp)),
+                contentAlignment = Alignment.BottomEnd
             ) {
-                Text(
-                    text = text.value,
+                OutlinedTextField(
+                    value = text.value,
+                    onValueChange = {
+                        text.value = it
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        unfocusedTextColor = Color.Black,
+                        focusedTextColor = Color.Black,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
                     modifier = Modifier
                         .verticalScroll(scrollState)
-                        .fillMaxSize()
+                        .fillMaxWidth(1f)
                         .padding(20.dp)
+                        .border(width = 0.dp, color = Color.Transparent),
+                    shape = RoundedCornerShape(16.dp),
+                    placeholder = {
+                        Text(text = "Tap here to edit text to speech")
+                    }
                 )
+//                Text(
+//                    text = text.value,
+//                    modifier = Modifier
+//                        .verticalScroll(scrollState)
+//                        .fillMaxWidth()
+//                        .fillMaxHeight()
+//                        .padding(20.dp),
+//                    textAlign = TextAlign.Start
+//                )
+                IconButton(onClick = {
+                    println("Text is ${text.value}")
+                    tts?.speak(text.value, TextToSpeech.QUEUE_FLUSH, null, null)
+                }) {
+                    Icon(painter = painterResource(id = R.drawable.baseline_volume_up_24), contentDescription = "")
+                }
             }
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             IconButton(onClick = {
                 if(isListening.value) {
-                    stt.stopListening()
+                    isListening.value = false
+                    speechRecognizer.stopListening()
                 } else {
-                    stt.startListening()
+                    speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+                    speechRecognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    speechRecognizerIntent.putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                    )
+                    speechRecognizerIntent.putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE,
+                        "id-ID"
+                    )
+                    speechRecognizerIntent.putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
+                        selectedLanguage
+                    )
+                    speechRecognizerIntent.putExtra(
+                        RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE,
+                        selectedLanguage
+                    )
+
+                    speechRecognizer.setRecognitionListener(object : RecognitionListener {
+                        override fun onReadyForSpeech(bundle: Bundle?) {
+                            println("Cucpake Ready")
+                        }
+                        override fun onBeginningOfSpeech() {
+                            println("Cucpake Begin")
+                        }
+                        override fun onRmsChanged(v: Float) {}
+                        override fun onBufferReceived(bytes: ByteArray?) {
+                            println("Cucpake Buffer")
+                        }
+                        override fun onEndOfSpeech() {
+                            isListening.value = false
+                        }
+
+                        override fun onError(errorCode: Int) {
+                            if(isFirstListen) {
+                                isFirstListen = false
+                                return
+                            }
+                            val message = when (errorCode) {
+                                SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+                                SpeechRecognizer.ERROR_CLIENT -> "Client side error"
+                                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
+                                SpeechRecognizer.ERROR_NETWORK -> "Please check your network"
+                                // Add other cases based on SpeechRecognizer error codes
+                                else -> "Unknown error"
+                            }
+                            println("Error code $errorCode")
+                            Toast.makeText(context, "Error occurred: $message", Toast.LENGTH_SHORT).show()
+                        }
+
+
+                        override fun onResults(bundle: Bundle) {
+                            val result = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            if (result != null) {
+                                // attaching the output
+                                // to our textview
+                                text.value = result[0]
+                            }
+                            println("Cupcake Results: $result")
+                        }
+
+                        override fun onPartialResults(bundle: Bundle) {
+                            val result = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            println("Cupcake Partial Results ${result?.joinToString("##")}")
+                            if(result != null) {
+                                text.value = result.joinToString(" ")
+                            }
+                        }
+                        override fun onEvent(i: Int, bundle: Bundle?) {
+                            println("Cupcake Event $i")
+                        }
+
+                    })
+                    speechRecognizer.startListening(speechRecognizerIntent)
+                    isListening.value = true
                 }
-                isListening.value = !isListening.value
             }, modifier = Modifier.size(80.dp)) {
                 Icon(
                     painter = painterResource(R.drawable.mic), contentDescription = "",
@@ -109,3 +238,5 @@ fun Context.getActivity(): Activity? {
     }
     return null
 }
+
+private val selectedLanguage = "id-ID"
