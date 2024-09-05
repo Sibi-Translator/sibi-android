@@ -3,8 +3,11 @@ package com.example.signlanguagedetector.utilities
 import android.content.Context
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
+import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 import kotlin.math.pow
 
 class HandLandmark(
@@ -33,65 +36,9 @@ class HandLandmark(
         options
     )
 
-    fun detect(image: ImageProxy) : Array<Array<Array<FloatArray>>> {
-        val mpImage = BitmapImageBuilder(image.toBitmap())
-        val x = handLandmarker.detect(mpImage.build())
-        if(x.landmarks().isEmpty()) {
-            println("CUPCAKE: empty landmark")
-            return arrayOf();
-        }
-        var hx = x.landmarks().first().toList().map {
-            it.x()
-        }
-        var hy = x.landmarks().first().toList().map {
-            it.y()
-        }
-        var hz = x.landmarks().first().toList().map {
-            it.z()
-        }
-
-        var stdX = standardDeviationUsingMathPackage(x.landmarks().first().toList().map {
-            it.x()
-        })
-        var stdY = standardDeviationUsingMathPackage(x.landmarks().first().toList().map {
-            it.y()
-        })
-        val stdZ = standardDeviationUsingMathPackage(x.landmarks().first().toList().map {
-            it.z()
-        })
-
-        if(stdZ != 0f) {
-            hz = hz.map {
-                it/stdZ
-            }
-        }
-        val jx = hx.max() - hx.min()
-        val jy = hy.max() - hy.min()
-
-        var ssx = listOf<Float>()
-        var ssy = listOf<Float>()
-        if(jx > jy) {
-            ssx = hx.map {
-                it - hx.min()/jx
-            }
-            ssy = hy.map {
-                it - hx.min()/jx
-            }
-        } else {
-            ssx = hx.map {
-                it - hy.min()/jy
-            }
-            ssy = hy.map {
-                it - hy.min()/jy
-            }
-        }
-
-        var arrFrame = arrayOf<FloatArray>()
-        ssx.forEachIndexed { index, fl ->
-            arrFrame += floatArrayOf(fl, ssy[index], hz[index])
-        }
-
-        return reshapeToModelInput(ssx.toFloatArray(), ssy.toFloatArray(), hz.toFloatArray());
+    fun detect(image: MPImage) : HandLandmarkerResult? {
+        val x = handLandmarker.detect(image)
+        return x;
     }
 
     fun detect2(image: ImageProxy) : Array<Array<Array<FloatArray>>>? {
@@ -152,29 +99,23 @@ class HandLandmark(
             arrFrame += floatArrayOf(fl, ssy[index], hz[index])
         }
 
-//        return reshapeToModelInput(ssx.toFloatArray(), ssy.toFloatArray(), hz.toFloatArray());
         return reshapeToModelInput2(ssx.toFloatArray(), ssy.toFloatArray(), hz.toFloatArray());
-        // Reshape for model input
-//        val xTrain = arrFrame.reshape(-1, splitFrame, 21, 3)
-//
-//        // Prediction
-//        val yPredProbabilities = model.predict(xTrain)
-//        val yPred = yPredProbabilities.argmax(axis = 1)[0]
-//        val predictedGesture = da[yPred]
-//
-//        println("\rTerprediksi: $predictedGesture")
-//        arrFrame.clear()
-//        predictS += " $predictedGesture"
-//
-//        if (predictS.length == 10) {
-//            predictS = predictS.substring(2)
-//        }
-
     }
 
     fun detect3(image: ImageProxy) : Array<Array<Array<FloatArray>>>? {
         val mpImage = BitmapImageBuilder(image.toBitmap())
         val x = handLandmarker.detect(mpImage.build())
+        var left = mutableListOf<NormalizedLandmark>()
+        var right = mutableListOf<NormalizedLandmark>()
+        if(x.handednesses().size < 2) {
+            //Suruh menjauh dulu
+        }
+        val indexLeft = if(x.handednesses().first().first().displayName() == "Left") 0 else 1
+        val indexRight = if(indexLeft == 1) 0 else 1
+
+        left.addAll(x.landmarks().get(indexLeft))
+        right.addAll(x.landmarks().get(indexRight))
+
         if(x.landmarks().isEmpty()) {
             println("CUPCAKE: empty landmark")
             return arrayOf();

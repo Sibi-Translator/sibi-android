@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.chaquopy)
 }
 
 android {
@@ -9,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.signlanguagedetector"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -17,6 +18,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
     }
 
@@ -46,6 +51,18 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "META-INF/INDEX.LIST"
+        }
+    }
+}
+
+chaquopy {
+    defaultConfig {
+         version = "3.8"
+
+        pip {
+            install("numpy")
         }
     }
 }
@@ -55,8 +72,9 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-task-vision:0.3.1")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.9.0")
     implementation(libs.vision.common)
-//    implementation(libs.tensorflow.lite.support)
+
     implementation(libs.tensorflow.lite.metadata)
+    implementation(libs.androidx.navigation.compose)
 
     val cameraxVersion = "1.3.1";
     implementation ("androidx.camera:camera-core:${cameraxVersion}")
@@ -67,6 +85,12 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.35.1-alpha")
 
     implementation("com.google.mediapipe:tasks-vision:latest.release")
+
+    implementation("io.github.kevinnzou:compose-webview:0.33.6")
+
+    implementation("com.google.cloud:google-cloud-speech:4.43.0") {
+        exclude(group = "com.google.protobuf", module = "protobuf-java")
+    }
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
