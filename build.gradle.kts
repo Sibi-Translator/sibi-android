@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.chaquopy) apply false
     alias(libs.plugins.android.lib) apply false
     alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.google.gms.google.services) apply false
 }
 //
 //android {

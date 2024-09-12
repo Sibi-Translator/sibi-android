@@ -16,9 +16,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import com.example.signlanguagedetector.data.AppDatabase
+import com.example.signlanguagedetector.helper.GoogleLogin
+import com.example.signlanguagedetector.ui.screen.Help
 import com.example.signlanguagedetector.ui.screen.Intro
 import com.example.signlanguagedetector.ui.screen.Login
 import com.example.signlanguagedetector.ui.screen.MainMenu
+import com.example.signlanguagedetector.ui.screen.Profile
 import com.example.signlanguagedetector.ui.screen.QDictionary
 import com.example.signlanguagedetector.ui.screen.Register
 import com.example.signlanguagedetector.ui.screen.Screen
@@ -26,6 +29,10 @@ import com.example.signlanguagedetector.ui.screen.SignToText
 import com.example.signlanguagedetector.ui.screen.Translation
 import com.example.signlanguagedetector.ui.screen.WebViews
 import com.example.signlanguagedetector.ui.theme.SignLanguageDetectorTheme
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
@@ -51,6 +58,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        GoogleLogin.auth = Firebase.auth
 
         activityResultLauncher.launch(
             arrayOf(Manifest.permission.CAMERA)
@@ -84,5 +93,7 @@ val screenList = listOf<Screen>(
     QDictionary,
     WebViews,
     Login,
-    Register
+    Register,
+    Profile,
+    Help
 )

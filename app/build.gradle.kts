@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.chaquopy)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -83,6 +84,7 @@ dependencies {
     implementation(libs.tensorflow.lite.metadata)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.tensorflow.lite.support)
+    implementation(libs.googleid)
 
     val cameraxVersion = "1.3.1";
     implementation ("androidx.camera:camera-core:${cameraxVersion}")
@@ -104,6 +106,20 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
+
+    implementation("com.google.android.gms:play-services-auth:19.2.0")
+
+    implementation("androidx.credentials:credentials:1.1.1")
+    implementation(libs.googleid)
+
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+
+    // Add the dependency for the Firebase Authentication library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation("com.google.firebase:firebase-auth")
+
+    // Also add the dependency for the Google Play services library and specify its version
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

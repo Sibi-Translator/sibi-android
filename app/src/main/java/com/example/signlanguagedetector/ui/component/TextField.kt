@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.signlanguagedetector.R
 
 @Composable
-fun SibiTextField(state: MutableState<String>, isPassword: Boolean = false, title: String = "") {
+fun SibiTextField(state: MutableState<String>, isPassword: Boolean = false, title: String = "", isEditable: Boolean = true) {
     val isObscured = remember {
         mutableStateOf(true)
     }
@@ -29,7 +29,9 @@ fun SibiTextField(state: MutableState<String>, isPassword: Boolean = false, titl
         state.value = it
     }, label = {
         Text(text = title)
-    }, placeholder = { Text(text = title) },
+    },
+        readOnly = !isEditable,
+        placeholder = { Text(text = title) },
         trailingIcon = {
             if(isPassword) {
                 IconButton(onClick = { if(isObscured.value) isObscured.value = false else isObscured.value = true }) {
@@ -41,6 +43,7 @@ fun SibiTextField(state: MutableState<String>, isPassword: Boolean = false, titl
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp),
+        maxLines = 1,
         shape = RoundedCornerShape(16.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.White,

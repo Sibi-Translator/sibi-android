@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.signlanguagedetector.Global
 import com.example.signlanguagedetector.R
 
 object Intro : Screen {
@@ -47,7 +48,13 @@ object Intro : Screen {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Button(
-                    onClick = { navController.navigate(Login.pageTitle) },
+                    onClick = {
+                        if(Global.user != null) {
+                            navController.navigate(MainMenu.pageTitle)
+                        } else {
+                            navController.navigate(Login.pageTitle)
+                        }
+                    },
                     modifier = Modifier.height(60.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xff374375))
                 ) {
@@ -65,7 +72,8 @@ object Intro : Screen {
                     fontSize = 10.sp,
                     modifier = Modifier
                         .clickable {
-                            /*TODO*/
+                            navController.currentBackStackEntry?.savedStateHandle?.set("url", "https://github.com/Sibi-Translator/sibi-android/blob/main/TnC.md")
+                            navController.navigate(WebViews.pageTitle)
                         }
                 )
                 Spacer(modifier = Modifier.height(60.dp))

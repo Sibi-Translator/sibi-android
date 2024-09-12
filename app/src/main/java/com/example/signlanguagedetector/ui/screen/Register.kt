@@ -1,6 +1,11 @@
 package com.example.signlanguagedetector.ui.screen
 
+import android.app.Activity
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -50,8 +56,13 @@ import androidx.navigation.NavController
 import com.example.signlanguagedetector.Global
 import com.example.signlanguagedetector.R
 import com.example.signlanguagedetector.data.model.User
+import com.example.signlanguagedetector.helper.GoogleLogin
 import com.example.signlanguagedetector.ui.component.SibiButton
 import com.example.signlanguagedetector.ui.component.SibiTextField
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 object Register :Screen {
@@ -107,14 +118,29 @@ object Register :Screen {
                     .padding(horizontal = 8.dp), color = Color.LightGray)
             }
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = { /*TODO*/ }, colors = ButtonDefaults.buttonColors(
+
+            val startForResult =
+                rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+                    if (result.resultCode == Activity.RESULT_OK) {
+                        val intent = result.data
+                        if (result.data != null) {
+                            val task: Task<GoogleSignInAccount> =
+                                GoogleSignIn.getSignedInAccountFromIntent(intent)
+                            Login.handleSignInResult(coroutine, task, navController)
+                        }
+                    }
+                }
+            val activity = LocalContext.current.getActivity()
+            Button(onClick = {
+                startForResult.launch(GoogleLogin.getGoogleLoginAuth(activity = activity!!).signInIntent)
+            }, colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xff374375),
                 contentColor = Color.White
             )) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(painter = painterResource(id = R.drawable.google_3), contentDescription = "",)
+                    Image(painter = painterResource(id = R.drawable.google_3), modifier = Modifier.size(24.dp),contentDescription = "",)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(text = "Google")
                 }
@@ -132,6 +158,33 @@ object Register :Screen {
                     if(it.item == "Masuk") navController.navigate(Login.pageTitle)
                 }
             })
+
+        }
+    }
+
+    fun handleSignInResult(coroutine: CoroutineScope, task: Task<GoogleSignInAccount>, navController: NavController) {
+        coroutine.launch {
+            try {
+                val gUser = User(
+                    email = task.result.email.orEmpty(),
+                    name = task.result.displayName.orEmpty(),
+                    password = "",
+                    image = task.result.photoUrl?.toString().orEmpty()
+                )
+                var user = Global.db?.userDao()?.getUserLogin(gUser.email)
+                if(user == null) {
+                    Global.db?.userDao()?.register(gUser)
+                    user = gUser
+                }
+                Global.user = user
+                navController.navigate(MainMenu.pageTitle) {
+                    popUpTo(Intro.pageTitle) {
+                        inclusive = true
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 
         }
     }
