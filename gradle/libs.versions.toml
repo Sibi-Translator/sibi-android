@@ -40,4 +40,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 chaquopy = { id= "com.chaquo.python", version.ref = "chaquopy" }
 android-lib = { id="com.android.library", version.ref = "android-lib" }
+ksp = { id="com.google.devtools.ksp", version = "1.9.0-1.0.12" }
 

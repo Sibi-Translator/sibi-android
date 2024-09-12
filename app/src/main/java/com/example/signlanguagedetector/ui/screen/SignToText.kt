@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.signlanguagedetector.R
+import com.example.signlanguagedetector.analyzer.SLAnalyzer
 import com.example.signlanguagedetector.ui.component.cameraX
 import com.example.signlanguagedetector.ui.theme.SignLanguageDetectorTheme
 import kotlinx.coroutines.CoroutineScope
@@ -50,12 +52,16 @@ object SignToText : Screen {
 
     @Composable
     override fun show(navController: NavController) {
+        val context = LocalContext.current
         val prediction = remember {
             mutableStateOf("")
         }
         val isActive = remember {
             mutableStateOf(false)
         }
+        val slAnalyzer = SLAnalyzer(context, {
+            prediction.value = it
+        })
 
         SignLanguageDetectorTheme {
             Surface(color = Color(0xffF7EDEC), modifier = Modifier.fillMaxSize()) {
@@ -70,6 +76,9 @@ object SignToText : Screen {
                     }
                     val started = remember {
                         mutableStateOf(false)
+                    }
+                    val isCleared = remember {
+                        mutableStateOf(true)
                     }
                     val context = LocalContext.current
                     val coroutine = rememberCoroutineScope()
@@ -91,24 +100,31 @@ object SignToText : Screen {
                                 Modifier
                                     .fillMaxWidth(0.9f)
                                     .clip(RoundedCornerShape(20.dp))) {
-                                cameraX(prediction, isActive, lensFacing.value)
+                                cameraX(prediction, isActive, lensFacing.value, slAnalyzer)
                             }
+                        } else {
+                            Column(
+                                Modifier
+                                    .fillMaxWidth(0.9f)
+                                    .clip(RoundedCornerShape(20.dp)).background(Color.White)) {}
                         }
                     }
                     TextField(
-                        value = text.value,
-                        onValueChange = {
-                            text.value = it
-                        }, enabled = false,
+                        value = prediction.value,
+                        onValueChange = {}, enabled = true,
                         modifier = Modifier
                             .fillMaxWidth(1f)
                             .padding(20.dp),
-                        placeholder = { Text(text = "Text", textAlign = TextAlign.Center) },
                         readOnly = true,
+                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
-                            disabledContainerColor = Color.White
+                            disabledContainerColor = Color.White,
+                            focusedIndicatorColor = Color.White,
+                            unfocusedTextColor = Color.Black,
+                            focusedTextColor = Color.Black,
+                            disabledTextColor = Color.Black
                         )
                     )
                     Row(
@@ -118,19 +134,22 @@ object SignToText : Screen {
                     ) {
                         val isPlaying = remember { mutableStateOf(false) }
                         IconButton(onClick = {
-                            if(isPlaying.value) {
-                                isPlaying.value = false
-                                // TODO: Add predict logic
-                            }
+                            isCleared.value = true
+                            isPlaying.value = false
+                            slAnalyzer.isPaused = !isPlaying.value
+                            val predict = slAnalyzer.predict()
+                            prediction.value = predict
                         },
                             modifier = Modifier.size(50.dp)
                         ) {
-                            if(isPlaying.value) {
+                            if(!isCleared.value) {
                                 Icon(painter = painterResource(id = R.drawable.stop), "")
                             }
                         }
                         IconButton(onClick = {
                             isPlaying.value = !isPlaying.value
+                            isCleared.value = false
+                            slAnalyzer.isPaused = !isPlaying.value
                         },
                             modifier = Modifier.size(80.dp)
                         ) {

@@ -1,4 +1,8 @@
 import numpy as np
+import tflite_runtime.interpreter as tflite
+
+from os.path import dirname, join
+filename = join(dirname(__file__), "model.tflite")
 
 def test():
   return np.absolute(-10)
@@ -95,15 +99,30 @@ def predict():
   arr_fs = np.array(arr_frame)
   arr_t = []
   for i in range(64):
-    arr_t.append(arr_fs[int(i * arr_fs.shape[0] / 64)])
+    index = int(i * arr_fs.shape[0] / 64)
+    if index >= arr_fs.shape[0]:
+        index = arr_fs.shape[0] - 1
+    arr_t.append(arr_fs[index])
   arr_fs = np.array(arr_t)
-  arr_fs = arr_fs.ravel()
-  arr_fs = np.delete(arr_fs, rd, axis=0)
-  X_train = arr_fs.reshape(-1, 58*64*3-len(rd), 1)
+#   arr_fs = arr_fs.ravel()
+  ravel = arr_fs.reshape(-1)
+  deleted = np.delete(ravel, rd, axis=0)
+#   return arr_fs
+  X_train = deleted.reshape(-1, 58*64*3-len(rd), 1)
   arr_frame = []
-  return X_train
 
-def getValue(x):
-  y_pred_probabilities = x
-  y_pred = np.argmax(y_pred_probabilities, axis=1)
-  return da[y_pred[0]]
+  interpreter = tflite.Interpreter(model_path=filename)
+  interpreter.allocate_tensors()
+  input_details = interpreter.get_input_details()
+  output_details = interpreter.get_output_details()
+  X_train = np.float32(X_train)
+  interpreter.set_tensor(input_details[0]['index'], X_train)
+  interpreter.invoke()
+  output_data = interpreter.get_tensor(output_details[0]['index'])
+  results = np.squeeze(output_data)
+  y_pred = np.argmax(results, axis=0)
+  return da[y_pred]
+
+def getSize():
+  global arr_frame
+  return len(arr_frame)

@@ -13,15 +13,17 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.compose.runtime.mutableStateOf
 import com.chaquo.python.Python
-import com.example.signlanguagedetector.ml.MyModel2
+import com.example.signlanguagedetector.ml.Model
 import com.example.signlanguagedetector.utilities.FaceLandmark
 import com.example.signlanguagedetector.utilities.HandLandmark
 import com.example.signlanguagedetector.utilities.OverlayView
 import com.example.signlanguagedetector.utilities.PoseLandmark
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
@@ -32,12 +34,12 @@ class SLAnalyzer(
     private val onResult: (String) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    val model = MyModel2.newInstance(context)
+    val model = Model.newInstance(context)
 
-    var isPaused = false
+    var isPaused = true
 
     val interpreter = Interpreter(
-        FileUtil.loadMappedFile(context, "my_model2.tflite")
+        FileUtil.loadMappedFile(context, "model.tflite")
     )
 
     val handLandmark = HandLandmark(context)
@@ -61,31 +63,23 @@ class SLAnalyzer(
     init {
         interpreter.allocateTensors()
         var arr = NormalizedLandmark.create(0f, 0f, 0f)
-        for(i in 0 until 22) {
+        for(i in 0 until 21) {
             emptyHandLandmark.add(arr)
             if(i < 12)
                 emptyFaceLandmark.add(arr)
             if(i<6)
                 emptyPoseLandmark.add(arr)
         }
-//        println("Cupcake :" + module)
-//        val test = module["test"]
-//        println("Cupcake :" + test?.call()?.toInt())
     }
 
     var n = 0
 
+
+
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(image: ImageProxy) {
-        if(isPaused) {
-            return image.close()
-        }
         try {
-            if(n > 9) {
-                val x = predict()
-                n = 0
-                onResult(x.toString())
-            } else {
+            if(!isPaused)  {
                 val mpImage = BitmapImageBuilder(image.toBitmap()).build()
                 val hands = handLandmark.detect(mpImage) ?: return image.close()
                 var leftArray = mutableListOf<NormalizedLandmark>()
@@ -101,91 +95,58 @@ class SLAnalyzer(
 
                     }
                 }
-                if(leftArray.isEmpty())
-                    leftArray = emptyHandLandmark
-                if(rightArray.isEmpty())
-                    rightArray = emptyHandLandmark
+                if(leftArray.isEmpty()) {
+                    leftArray.clear()
+                    leftArray.addAll(emptyHandLandmark)
+                }
+                if(rightArray.isEmpty()) {
+                    rightArray.clear()
+                    rightArray.addAll(emptyHandLandmark)
+                }
                 leftArray.removeAt(1)
                 rightArray.removeAt(1)
                 val la = leftArray.map { arrayOf(it.x(), it.y(), it.z()) }.toTypedArray()
                 val ra = rightArray.map { arrayOf(it.x(), it.y(), it.z()) }.toTypedArray()
-                val face = faceLandmark.detect(mpImage)
+                var face = faceLandmark.detect(mpImage)
+                if(face == null || face.isEmpty()) {
+                    face = emptyFaceLandmark
+                }
                 val faceArray = face.map {
                     arrayOf(it.x(), it.y(), it.z())
                 }.toTypedArray()
-                val pose = poseLandmark.detect(mpImage)
-                val poseArray = pose.first().slice(11..16).map {
+                var pose = poseLandmark.detect(mpImage)
+                if(pose == null || pose.isEmpty()) {
+                    pose = emptyPoseLandmark
+                }
+                val poseArray = pose.map {
                     arrayOf(it.x(), it.y(), it.z())
                 }.toTypedArray()
 
-                val result = dataProcessor?.call(poseArray, la, ra, faceArray)
-                n += 1;
+                dataProcessor?.call(poseArray, la, ra, faceArray)
             }
             image.close()
         } catch (e: Exception) {
+            e.printStackTrace()
             image.close()
         }
-
-        //v1 - with 64 frame reading
-//        var shape = handLandmark.detect2(image)
-//        if(shape.isNullOrEmpty()) {
-//            if(shape == null) {
-//                image.close()
-//                return
-//            }
-//            println("CUPCAKE: IS EMPTY with shape: ${shape.size}")
-//            runBlocking {
-//                delay(500)
-//            }
-//            image.close()
-//            return
-//        }
-//        shape = shape.normalize()
-//
-//        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
-//        tensor.loadBuffer(floatArrayToByteBuffer(shape))
-//        println(tensor.shape.joinToString(separator = ","))
-//
-//        val processedOutput = model.process(tensor)
-//        println("CUPCAKE: " + processedOutput.outputFeature0AsTensorBuffer.shape.joinToString(separator = ","))
-//        val array = processedOutput.outputFeature0AsTensorBuffer.floatArray
-//        println("CUPCAKE: " + array.joinToString(separator = ","))
-//        val max = array.max()
-//        onResult(alphabet[array.asList().indexOf(max)].toString())
-//        println("CUPCAKE: " + alphabet[array.asList().indexOf(max)])
-//        runBlocking {
-//            delay(1000)
-//            image.close()
-//        }
-
-        //v2
-//        val shape = handLandmark.detect3(image)
-//        if(shape.isNullOrEmpty()) {
-//            println("CUPCAKE: IS EMPTY with shape: ${shape?.size}")
-//            image.close()
-//            return
-//        }
-//
-//        val tensor = TensorBuffer.createFixedSize(intArrayOf(1, 64, 21, 3), DataType.FLOAT32)
-//        tensor.loadBuffer(floatArrayToByteBuffer(shape))
-////        tensor.loadBuffer(floatArrayToByteBuffer(shape.normalize()))
-//
-//        val processedOutput = model.process(tensor)
-//        val outputArray = processedOutput.outputFeature0AsTensorBuffer.floatArray
-//
-//        val max = outputArray.maxOrNull()
-//        onResult(alphabet[outputArray.asList().indexOf(max)].toString())
-//        Thread().run {
-//            Thread.sleep(1000)
-//            image.close()
-//        }
     }
 
-    fun predict(): String? {
+    fun predict(): String {
+        val size = module["getSize"]?.call()?.toInt()
+        if(size == null || size == 0) {
+            return ""
+        }
         val predict = module["predict"]
-        val result = predict?.call()
-        println("Cupcake: " + result)
-        return result?.toString()
+
+        try {
+            val result = predict?.call()
+            onResult(result.toString())
+            return result.toString()
+        } catch (e : Exception) {
+            e.printStackTrace()
+        }
+
+        return ""
     }
 
     private fun toBitmap(image: Image): Bitmap {
@@ -212,12 +173,10 @@ class SLAnalyzer(
         return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, BitmapFactory.Options())
     }
 
-    fun floatArrayToByteBuffer(floatArrays: Array<Array<Array<FloatArray>>>): ByteBuffer {
+    fun floatArrayToByteBuffer(floatArrays: Array<Array<Array<Float>>>): ByteBuffer {
         val totalElements = floatArrays.flatMap { array1 ->
             array1.flatMap { array2 ->
-                array2.flatMap { floatArray ->
-                    floatArray.asList()
-                }
+                array2.asList()
             }
         }.size
 
@@ -226,8 +185,8 @@ class SLAnalyzer(
 
         for (array1 in floatArrays) {
             for (array2 in array1) {
-                for (floatArray in array2) {
-                    floatBuffer.put(floatArray)
+                for (item in array2) {
+                    floatBuffer.put(item)
                 }
             }
         }

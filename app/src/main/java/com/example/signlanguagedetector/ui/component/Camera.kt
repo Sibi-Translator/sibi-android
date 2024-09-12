@@ -31,7 +31,8 @@ import kotlin.coroutines.suspendCoroutine
 fun cameraX(
     prediction: MutableState<String>,
     isActive: MutableState<Boolean>,
-    lensFacing: Int = CameraSelector.LENS_FACING_FRONT
+    lensFacing: Int = CameraSelector.LENS_FACING_FRONT,
+    slAnalyzer: SLAnalyzer
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
@@ -44,9 +45,7 @@ fun cameraX(
     var imageAnalysis: ImageAnalysis? by remember {
         mutableStateOf(null)
     }
-    val SLAnalyzer = SLAnalyzer(context, {
-        prediction.value = it
-    })
+
     val previewView = remember {
         PreviewView(context)
     }
@@ -56,10 +55,13 @@ fun cameraX(
         .requireLensFacing(lensFacing).build()
 
     LaunchedEffect(key1 = isActive.value) {
-        if(isActive.value)
-            SLAnalyzer.isPaused = false
-        else
-            SLAnalyzer.isPaused = true
+        println("Cupcake is changed to ${isActive.value}")
+        if(isActive.value) {
+            slAnalyzer.isPaused = false
+        } else {
+            slAnalyzer.isPaused = true
+            slAnalyzer.predict()
+        }
     }
 
     AndroidView(
@@ -74,7 +76,7 @@ fun cameraX(
                     .build()
                 imageAnalysis!!.setAnalyzer(
                     ContextCompat.getMainExecutor(context),
-                    SLAnalyzer
+                    slAnalyzer
                 )
 
                 cameraProvider.unbindAll()

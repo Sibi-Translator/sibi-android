@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.chaquopy)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -21,7 +22,7 @@ android {
         }
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
         }
     }
 
@@ -58,23 +59,30 @@ android {
 }
 
 chaquopy {
+    sourceSets {
+        getByName("main") {
+            srcDirs("src/main/assets")
+        }
+    }
     defaultConfig {
          version = "3.8"
 
         pip {
             install("numpy")
+            install("tflite_runtime")
         }
     }
 }
 
 dependencies {
-    implementation("org.tensorflow:tensorflow-lite:2.9.0")
-    implementation("org.tensorflow:tensorflow-lite-task-vision:0.3.1")
+//    implementation("org.tensorflow:tensorflow-lite:2.9.0")
+//    implementation("org.tensorflow:tensorflow-lite-task-vision:0.3.1")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.9.0")
     implementation(libs.vision.common)
 
     implementation(libs.tensorflow.lite.metadata)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.tensorflow.lite.support)
 
     val cameraxVersion = "1.3.1";
     implementation ("androidx.camera:camera-core:${cameraxVersion}")
@@ -91,6 +99,11 @@ dependencies {
     implementation("com.google.cloud:google-cloud-speech:4.43.0") {
         exclude(group = "com.google.protobuf", module = "protobuf-java")
     }
+
+    val room_version = "2.6.1";
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -29,24 +29,31 @@ class FaceLandmark(
 
     val faceLandmarker = FaceLandmarker.createFromOptions(context, options)
 
-    fun detect(image: MPImage) : MutableList<NormalizedLandmark> {
+    fun detect(image: MPImage) : MutableList<NormalizedLandmark>? {
         val x = faceLandmarker.detect(image)
+        if(x.faceLandmarks().firstOrNull() == null)
+            return null
         if(x.faceLandmarks().first().size < 318)
-            return mutableListOf()
-        val selectedPoint = mutableListOf(
-            x.faceLandmarks()[0][78],
-            x.faceLandmarks()[0][80],
-            x.faceLandmarks()[0][82],
-            x.faceLandmarks()[0][13],
-            x.faceLandmarks()[0][312],
-            x.faceLandmarks()[0][310],
-            x.faceLandmarks()[0][308],
-            x.faceLandmarks()[0][88],
-            x.faceLandmarks()[0][87],
-            x.faceLandmarks()[0][14],
-            x.faceLandmarks()[0][317],
-            x.faceLandmarks()[0][318]
-        )
+            return null
+        val selectedPoint = mutableListOf<NormalizedLandmark>()
+        try {
+            selectedPoint.addAll(listOf(
+                x.faceLandmarks()[0][78],
+                x.faceLandmarks()[0][80],
+                x.faceLandmarks()[0][82],
+                x.faceLandmarks()[0][13],
+                x.faceLandmarks()[0][312],
+                x.faceLandmarks()[0][310],
+                x.faceLandmarks()[0][308],
+                x.faceLandmarks()[0][88],
+                x.faceLandmarks()[0][87],
+                x.faceLandmarks()[0][14],
+                x.faceLandmarks()[0][317],
+                x.faceLandmarks()[0][318]
+            ))
+        } catch (e : Exception) {
+            return  null
+        }
         return selectedPoint
     }
 }

@@ -1,6 +1,7 @@
 package com.example.signlanguagedetector.ui.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -26,6 +28,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,7 +47,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.signlanguagedetector.Global
 import com.example.signlanguagedetector.R
+import com.example.signlanguagedetector.ui.component.SibiButton
+import com.example.signlanguagedetector.ui.component.SibiTextField
+import kotlinx.coroutines.channels.actor
+import kotlinx.coroutines.launch
 
 object Login : Screen {
     override val pageTitle: String = "Login"
@@ -59,84 +67,42 @@ object Login : Screen {
         ) {
             val email = remember { mutableStateOf("") }
             val password = remember { mutableStateOf("") }
-            val isObscured = remember { mutableStateOf(true) }
 
             Spacer(modifier = Modifier.height(24.dp))
             Text(text = "Selamat Datang Kembali!", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xff374375), textAlign = TextAlign.Center, lineHeight = 34.sp)
             Text(text = "Isi kolom dibawah untuk melanjutkan.", fontSize = 16.sp, color = Color(0xff374375), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(32.dp))
-            TextField(value = email.value, onValueChange = {
-                email.value = it
-            }, label = {
-                Text(text = "Email")
-            }, placeholder = { Text(text = "Email") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black,
-                    cursorColor = Color.Black,
-                    unfocusedPlaceholderColor = Color.Black,
-                    focusedPlaceholderColor = Color.Black,
-                    unfocusedLabelColor = Color.Black,
-                    focusedLabelColor = Color.Black,
-                    focusedTrailingIconColor = Color.Black,
-                    unfocusedTrailingIconColor = Color.Black,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                )
-            )
+            SibiTextField(state = email, false, "Email")
             Spacer(modifier = Modifier.height(16.dp))
-            TextField(value = password.value, onValueChange = {
-                password.value = it
-            }, label = {
-                Text(text = "Kata sandi")
-            }, placeholder = { Text(text = "Kata sandi") },
-                trailingIcon = {
-                    IconButton(onClick = { if(isObscured.value) isObscured.value = false else isObscured.value = true }) {
-                        Icon(painter = painterResource(id = if(isObscured.value) R.drawable.baseline_visibility_24 else R.drawable.baseline_visibility_off_24), contentDescription = "")
-                    }
-                },
-                visualTransformation = if (isObscured.value) PasswordVisualTransformation() else VisualTransformation.None,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black,
-                    cursorColor = Color.Black,
-                    unfocusedPlaceholderColor = Color.Black,
-                    focusedPlaceholderColor = Color.Black,
-                    unfocusedLabelColor = Color.Black,
-                    focusedLabelColor = Color.Black,
-                    focusedTrailingIconColor = Color.Black,
-                    unfocusedTrailingIconColor = Color.Black,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                )
-            )
+            SibiTextField(state = password, true, "Kata sandi")
             Spacer(modifier = Modifier.height(24.dp))
             val context = LocalContext.current
-            Button(onClick = {
-                if(email.value == "sobatsibi" && password.value == "12345678")  {
-                    navController.navigate(MainMenu.pageTitle)
-                } else {
-                    Toast.makeText(context, "Email atau kata sandi salah", Toast.LENGTH_SHORT).show()
+            val coroutine = rememberCoroutineScope()
+            val activity = LocalContext.current.getActivity()
+            SibiButton(onClick = {
+                coroutine.launch {
+                    try {
+                        val user = Global.db?.userDao()?.getUserLogin(email.value)
+                        if(user != null) {
+                            if (user.password == password.value) {
+                                Global.user = user
+                                with(Global.sharedPreferences?.edit()) {
+                                    this?.putString("email", user.email)
+                                    this?.apply()
+                                }
+                                navController.navigate(MainMenu.pageTitle)
+                            } else {
+                                Toast.makeText(context, "Login gagal", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Login gagal", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Toast.makeText(context, "Login gagal: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
-            }, colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xff374375)
-            )) {
-                Text(text = "Masuk", color = Color.White)
-            }
+            }, title = "Masuk")
             Spacer(modifier = Modifier.height(24.dp))
             Row(modifier = Modifier.align(Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
                 Divider(modifier = Modifier
@@ -155,7 +121,7 @@ object Login : Screen {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(painter = painterResource(id = R.drawable.google_3), contentDescription = "",)
+                    Image(painter = painterResource(id = R.drawable.google_3), modifier = Modifier.size(24.dp),contentDescription = "",)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(text = "Google")
                 }

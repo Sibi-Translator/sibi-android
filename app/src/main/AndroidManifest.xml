@@ -16,7 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SignLanguageDetector"
         tools:targetApi="31"
-        android:name=".SLA">
+        android:name=".SLA"
+        android:largeHeap="true"
+        >
         <activity
             android:name=".MainActivity"
             android:exported="true"

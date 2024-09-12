@@ -57,7 +57,6 @@ object SpeechToText : Screen {
             mutableStateOf(false)
         }
         val context = LocalContext.current
-        val activity = context.getActivity()
         var speechRecognizer: SpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
         var speechRecognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         var isFirstListen = true

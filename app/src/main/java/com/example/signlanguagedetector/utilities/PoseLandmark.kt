@@ -24,8 +24,16 @@ class PoseLandmark(
         .build()
     val poseLandmarker = PoseLandmarker.createFromOptions(context, options)
 
-    fun detect(image: MPImage): MutableList<MutableList<NormalizedLandmark>> {
+    fun detect(image: MPImage): MutableList<NormalizedLandmark>? {
         val x = poseLandmarker.detect(image)
-        return x.landmarks()
+        val selectedPoints = mutableListOf<NormalizedLandmark>()
+        try {
+            val pose = x.landmarks().get(0)
+            pose.slice(IntRange(11, 16))
+        } catch (e : Exception) {
+            e.printStackTrace()
+            return null
+        }
+        return selectedPoints
     }
 }

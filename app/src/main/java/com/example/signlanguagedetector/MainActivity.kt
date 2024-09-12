@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
+import com.example.signlanguagedetector.data.AppDatabase
 import com.example.signlanguagedetector.ui.screen.Intro
 import com.example.signlanguagedetector.ui.screen.Login
 import com.example.signlanguagedetector.ui.screen.MainMenu
@@ -24,6 +26,7 @@ import com.example.signlanguagedetector.ui.screen.SignToText
 import com.example.signlanguagedetector.ui.screen.Translation
 import com.example.signlanguagedetector.ui.screen.WebViews
 import com.example.signlanguagedetector.ui.theme.SignLanguageDetectorTheme
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
 
@@ -52,6 +55,10 @@ class MainActivity : ComponentActivity() {
         activityResultLauncher.launch(
             arrayOf(Manifest.permission.CAMERA)
         )
+
+        runBlocking {
+            Global.init(context = this@MainActivity, activity = this@MainActivity)
+        }
 
         setContent {
             SignLanguageDetectorTheme {
